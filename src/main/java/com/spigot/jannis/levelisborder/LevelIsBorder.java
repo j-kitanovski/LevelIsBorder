@@ -25,7 +25,7 @@ public final class LevelIsBorder extends JavaPlugin {
             for (Player pl : players) {
                 all_levels = all_levels + pl.getLevel();
             }
-            border.setSize(all_levels * 1.8);
+            border.setSize((all_levels + 3) * 1.8);
         }
     }
 
