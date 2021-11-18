@@ -21,37 +21,6 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.2.0</version>
-                <executions>
-                    <execution>
-                        <id>copy</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <artifactItems>
-                        <artifactItem>
-                            <groupId>${groupId}</groupId>
-                            <artifactId>${artifactId}</artifactId>
-                            <version>${version}</version>
-                            <type>jar</type>
-                            <overWrite>true</overWrite>
-                            <outputDirectory>C:\Users\Jannis\Development\MinecraftPluginsEntwickeln\server\plugins
-                            </outputDirectory>
-                        </artifactItem>
-                    </artifactItems>
-                    <outputDirectory>C:\Users\Jannis\Development\MinecraftPluginsEntwickeln\server\plugins
-                    </outputDirectory>
-                    <overWriteReleases>true</overWriteReleases>
-                    <overWriteSnapshots>true</overWriteSnapshots>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
@@ -71,6 +40,15 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/*.MF</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
@@ -86,6 +64,10 @@
 
     <repositories>
         <repository>
+            <id>eldonexus</id>
+            <url>https://eldonexus.de/repository/maven-releases/</url>
+        </repository>
+        <repository>
             <id>spigotmc-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
@@ -96,6 +78,12 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>com.github.yannicklamprecht.worldborderapi</groupId>
+            <artifactId>api</artifactId>
+            <version>1.170.0</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
