@@ -3,14 +3,15 @@ package com.spigot.jannis.levelisborder;
 import com.github.yannicklamprecht.worldborder.api.BorderAPI;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import org.bukkit.World;
-import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -20,14 +21,24 @@ public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
 
     private Player latestplayer;
-    private boolean playerjoined;
+    private boolean reloadborder;
     public class JoinListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
         public void onEvent(PlayerJoinEvent event){
             Player player = event.getPlayer();
             player.setLevel(player.getLevel() + 1);
             latestplayer = player;
-            playerjoined = true;
+            reloadborder = true;
+        }
+    }
+
+    public class DeathListener implements Listener {
+        @EventHandler(priority = EventPriority.HIGHEST)
+        public void onEvent(PlayerDeathEvent event){
+            Player player = event.getEntity();
+            player.setLevel(player.getLevel() + 1);
+            latestplayer = player;
+            reloadborder = true;
         }
     }
 
@@ -36,13 +47,11 @@ public final class LevelIsBorder extends JavaPlugin {
         public void onEvent(PlayerLevelChangeEvent event) {
             Player player = event.getPlayer();
             World world = player.getWorld();
-            WorldBorder border = world.getWorldBorder();
             List<Player> players = world.getPlayers();
 
             int playerlevel = player.getLevel();
             int all_levels = 0;
 
-            border.setCenter(0.0, 0.0);
             for (Player pl : players) {
                 all_levels = all_levels + pl.getLevel();
             }
@@ -56,9 +65,9 @@ public final class LevelIsBorder extends JavaPlugin {
     public class MoveListener implements Listener {
         @EventHandler(priority = EventPriority.NORMAL)
         public void onEvent(PlayerMoveEvent event){
-            if (playerjoined){
+            if (reloadborder && latestplayer.getUniqueId() == event.getPlayer().getUniqueId()){
                 latestplayer.setLevel(latestplayer.getLevel() - 1);
-                playerjoined = false;
+                reloadborder = false;
             }
         }
     }
@@ -69,6 +78,9 @@ public final class LevelIsBorder extends JavaPlugin {
 
         JoinListener joinListener = new JoinListener();
         pluginManager.registerEvents(joinListener, this);
+
+        DeathListener deathListener = new DeathListener();
+        pluginManager.registerEvents(deathListener, this);
 
         LevelListener levelListener = new LevelListener();
         pluginManager.registerEvents(levelListener, this);

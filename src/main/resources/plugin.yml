@@ -2,5 +2,7 @@ name: LevelIsBorder
 version: '${project.version}'
 main: com.spigot.jannis.levelisborder.LevelIsBorder
 api-version: 1.17
+depend:
+  - WorldBorderAPI
 authors: [ Jannis ]
 description: The Player Levels are the size of the border
