@@ -1,7 +1,12 @@
 package com.jannis.levelisborder;
 
+import com.github.yannicklamprecht.worldborder.api.IWorldBorder;
+import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
+import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,7 +27,6 @@ import java.util.List;
  */
 public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
-
     private Player latestplayer;
     private boolean reloadborder;
     private int all_levels;
@@ -42,8 +46,6 @@ public final class LevelIsBorder extends JavaPlugin {
         public void onEvent(PlayerDeathEvent event) {
             Player player = event.getEntity();
             player.setLevel(player.getLevel() + 1);
-            latestplayer = player;
-            reloadborder = true;
         }
     }
 
@@ -60,6 +62,7 @@ public final class LevelIsBorder extends JavaPlugin {
             for (Player pl : players) {
                 worldBorderApi.setBorder(pl, (all_levels * 1.8) + 3);
             }
+            all_levels = 0;
 
         }
     }
@@ -104,5 +107,13 @@ public final class LevelIsBorder extends JavaPlugin {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player){
+
+        }
+        return true;
     }
 }

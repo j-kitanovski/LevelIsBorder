@@ -6,3 +6,7 @@ depend:
   - WorldBorderAPI
 authors: [ Jannis ]
 description: The Player Levels are the size of the border
+commands:
+  border:
+    description: You can edit the border
+    usage: /border command
