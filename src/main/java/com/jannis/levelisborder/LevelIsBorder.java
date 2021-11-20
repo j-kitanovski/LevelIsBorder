@@ -1,5 +1,7 @@
 package com.jannis.levelisborder;
 
+import com.github.yannicklamprecht.worldborder.api.IWorldBorder;
+import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -26,8 +28,10 @@ import java.util.List;
 public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
     private Player latestplayer;
-    private boolean reloadborder;
-    private int all_levels;
+    private boolean reloadborder = false;
+    private Position pos_center = new Position(0.0,0.0);
+    private double size = 0;
+    private IWorldBorder worldBorder;
 
     public class JoinListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
@@ -54,15 +58,25 @@ public final class LevelIsBorder extends JavaPlugin {
             World world = player.getWorld();
             List<Player> players = world.getPlayers();
 
-            for (Player pl : players) {
-                all_levels = all_levels + pl.getLevel();
-            }
-            for (Player pl : players) {
-                worldBorderApi.setBorder(pl, (all_levels * 1.8) + 3);
-            }
-            all_levels = 0;
 
+            double playerSize = (1.8 * getSumOfPlayerLevels(world)) + 3;
+            if(size > 0){
+                playerSize = size + playerSize;
+            }
+
+            for (Player pl : players) {
+                worldBorderApi.setBorder(pl, playerSize, pos_center);
+            }
         }
+    }
+
+    public double getSumOfPlayerLevels(World world){
+        List<Player> players = world.getPlayers();
+        double sumofplayerlevels = 0;
+        for (Player pl : players) {
+            sumofplayerlevels = sumofplayerlevels + pl.getLevel();
+        }
+        return sumofplayerlevels;
     }
 
     public class MoveListener implements Listener {
@@ -109,6 +123,30 @@ public final class LevelIsBorder extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player){
+            Player player = (Player) sender;
+            World world = player.getWorld();
+            worldBorder = worldBorderApi.getWorldBorder(world);
+            List<Player> players = world.getPlayers();
+            if (args.length < 1){
+                this.getLogger().info("Please add an argument");
+            }
+            else if (args[0].equals("center")){
+                double x = Double.parseDouble(args[1]);
+                double z = Double.parseDouble(args[2]);
+                pos_center = new Position(x, z);
+                for (Player pl : players){
+                    worldBorderApi.setBorder(pl, size + 1.8 * getSumOfPlayerLevels(world) + 3, pos_center);
+                }
+            }
+            else if (args[0].equals("size")){
+                size = Double.parseDouble(args[1]);
+
+                for (Player pl : players){
+                    worldBorderApi.setBorder(pl, size + 1.8 * getSumOfPlayerLevels(world) + 3,pos_center);
+                }
+            }
+        }
         return true;
     }
 }
