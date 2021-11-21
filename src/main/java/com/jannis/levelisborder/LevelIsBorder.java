@@ -55,6 +55,15 @@ public final class LevelIsBorder extends JavaPlugin {
         }
     }
 
+    public class ChangeWorldListener implements Listener {
+        @EventHandler(priority = EventPriority.HIGHEST)
+        public void onEvent(PlayerChangedWorldEvent event){
+            Player player = event.getPlayer();
+            player.setLevel(player.getLevel()+1);
+            reloadborder = true;
+        }
+    }
+
     public class LevelListener implements Listener {
         @EventHandler(priority = EventPriority.HIGH)
         public void onEvent(PlayerLevelChangeEvent event) {
@@ -116,6 +125,9 @@ public final class LevelIsBorder extends JavaPlugin {
         DeathListener deathListener = new DeathListener();
         pluginManager.registerEvents(deathListener, this);
 
+        ChangeWorldListener changeWorldListener = new ChangeWorldListener();
+        pluginManager.registerEvents(changeWorldListener, this);
+
         LevelListener levelListener = new LevelListener();
         pluginManager.registerEvents(levelListener, this);
 
@@ -158,7 +170,7 @@ public final class LevelIsBorder extends JavaPlugin {
                     }
                     config.save(file);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
-                    player.sendMessage("Enter a number.");
+                    player.sendMessage("You have to enter two numbers.");
                 } catch (IOException e1){
                     this.getLogger().info("Unable to safe configuration file.");
                 }
@@ -172,10 +184,12 @@ public final class LevelIsBorder extends JavaPlugin {
                     }
                     config.save(file);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
-                    player.sendMessage("Enter a number.");
+                    player.sendMessage("You have to enter a number as argument.");
                 } catch (IOException e1){
                     this.getLogger().info("Unable to safe configuration file.");
                 }
+            } else{
+                player.sendMessage("Enter an argument. Type /help border to see all.");
             }
         }
         return true;
