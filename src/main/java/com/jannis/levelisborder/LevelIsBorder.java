@@ -1,6 +1,5 @@
 package com.jannis.levelisborder;
 
-import com.github.yannicklamprecht.worldborder.api.IWorldBorder;
 import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import org.bukkit.World;
@@ -29,9 +28,8 @@ public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
     private Player latestplayer;
     private boolean reloadborder = false;
-    private Position pos_center = new Position(0.0,0.0);
-    private double size = 0;
-    private IWorldBorder worldBorder;
+    private Position pos_center = new Position(0.0, 0.0);
+    private double size = 3;
 
     public class JoinListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
@@ -43,7 +41,7 @@ public final class LevelIsBorder extends JavaPlugin {
         }
     }
 
-    public class DeathListener implements Listener {
+    public static class DeathListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
         public void onEvent(PlayerDeathEvent event) {
             Player player = event.getEntity();
@@ -59,8 +57,8 @@ public final class LevelIsBorder extends JavaPlugin {
             List<Player> players = world.getPlayers();
 
 
-            double playerSize = (1.8 * getSumOfPlayerLevels(world)) + 3;
-            if(size > 0){
+            double playerSize = (calculateSize(0, world));
+            if (size >= 3) {
                 playerSize = size + playerSize;
             }
 
@@ -68,15 +66,6 @@ public final class LevelIsBorder extends JavaPlugin {
                 worldBorderApi.setBorder(pl, playerSize, pos_center);
             }
         }
-    }
-
-    public double getSumOfPlayerLevels(World world){
-        List<Player> players = world.getPlayers();
-        double sumofplayerlevels = 0;
-        for (Player pl : players) {
-            sumofplayerlevels = sumofplayerlevels + pl.getLevel();
-        }
-        return sumofplayerlevels;
     }
 
     public class MoveListener implements Listener {
@@ -87,6 +76,19 @@ public final class LevelIsBorder extends JavaPlugin {
                 reloadborder = false;
             }
         }
+    }
+
+    public double getSumOfPlayerLevels(World world) {
+        List<Player> players = world.getPlayers();
+        double sumofplayerlevels = 0;
+        for (Player pl : players) {
+            sumofplayerlevels = sumofplayerlevels + pl.getLevel();
+        }
+        return sumofplayerlevels;
+    }
+
+    public double calculateSize(double size, World world) {
+        return size + 1.8 * getSumOfPlayerLevels(world);
     }
 
     @Override
@@ -123,27 +125,33 @@ public final class LevelIsBorder extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player){
+        if (sender instanceof Player) {
             Player player = (Player) sender;
             World world = player.getWorld();
-            worldBorder = worldBorderApi.getWorldBorder(world);
             List<Player> players = world.getPlayers();
-            if (args.length < 1){
+            if (args.length < 1) {
                 this.getLogger().info("Please add an argument");
-            }
-            else if (args[0].equals("center")){
-                double x = Double.parseDouble(args[1]);
-                double z = Double.parseDouble(args[2]);
-                pos_center = new Position(x, z);
-                for (Player pl : players){
-                    worldBorderApi.setBorder(pl, size + 1.8 * getSumOfPlayerLevels(world) + 3, pos_center);
+            } else if (args[0].equals("center")) {
+                try {
+                    double x = Double.parseDouble(args[1]);
+                    double z = Double.parseDouble(args[2]);
+                    pos_center = new Position(x, z);
+                    for (Player pl : players) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                    }
+                } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
+                    player.sendMessage("Enter a number.");
                 }
-            }
-            else if (args[0].equals("size")){
-                size = Double.parseDouble(args[1]);
 
-                for (Player pl : players){
-                    worldBorderApi.setBorder(pl, size + 1.8 * getSumOfPlayerLevels(world) + 3,pos_center);
+            } else if (args[0].equals("size")) {
+                try {
+                    size = Double.parseDouble(args[1]);
+
+                    for (Player pl : players) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                    }
+                } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
+                    player.sendMessage("Enter a number.");
                 }
             }
         }
