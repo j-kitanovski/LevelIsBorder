@@ -13,5 +13,5 @@ First, the total levels of all players are multiplied by 1.8. Then 3 is added to
 | Usage | Description |
 | --------------- | --------------- |
 | /border size <radius> | Sets the border size to the specified radius |
-| /border center <x> <z> | Sets the border centre to the given x and z coordinates |
+| /border center <x> <z> | Sets the border center to the given x and z coordinates |
 
