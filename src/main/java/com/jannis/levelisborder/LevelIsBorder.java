@@ -5,11 +5,13 @@ import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -17,6 +19,8 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -28,8 +32,10 @@ public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
     private Player latestplayer;
     private boolean reloadborder = false;
-    private Position pos_center = new Position(0.0, 0.0);
+    private Position pos_center;
     private double size = 3;
+    private File file;
+    private YamlConfiguration config;
 
     public class JoinListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
@@ -78,7 +84,7 @@ public final class LevelIsBorder extends JavaPlugin {
         }
     }
 
-    public double getSumOfPlayerLevels(World world) {
+    private double getSumOfPlayerLevels(World world) {
         List<Player> players = world.getPlayers();
         double sumofplayerlevels = 0;
         for (Player pl : players) {
@@ -87,8 +93,17 @@ public final class LevelIsBorder extends JavaPlugin {
         return sumofplayerlevels;
     }
 
-    public double calculateSize(double size, World world) {
+    private double calculateSize(double size, World world) {
         return size + 1.8 * getSumOfPlayerLevels(world);
+    }
+
+    private void initConfigFile(){
+        this.saveResource("config.yml", false);
+        file = new File(this.getDataFolder(), "config.yml");
+        config = YamlConfiguration.loadConfiguration(file);
+        //set data
+        size = config.getDouble("size");
+        pos_center = new Position(config.getDouble("center.x"), config.getDouble("center.z"));
     }
 
     @Override
@@ -114,8 +129,8 @@ public final class LevelIsBorder extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-
         worldBorderApi = worldBorderApiRegisteredServiceProvider.getProvider();
+        initConfigFile();
     }
 
     @Override
@@ -135,23 +150,31 @@ public final class LevelIsBorder extends JavaPlugin {
                 try {
                     double x = Double.parseDouble(args[1]);
                     double z = Double.parseDouble(args[2]);
+                    config.set("center.x", x);
+                    config.set("center.z", z);
                     pos_center = new Position(x, z);
                     for (Player pl : players) {
                         worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
                     }
+                    config.save(file);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
                     player.sendMessage("Enter a number.");
+                } catch (IOException e1){
+                    this.getLogger().info("Unable to safe configuration file.");
                 }
 
             } else if (args[0].equals("size")) {
                 try {
                     size = Double.parseDouble(args[1]);
-
+                    config.set("size", size);
                     for (Player pl : players) {
                         worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
                     }
+                    config.save(file);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
                     player.sendMessage("Enter a number.");
+                } catch (IOException e1){
+                    this.getLogger().info("Unable to safe configuration file.");
                 }
             }
         }
