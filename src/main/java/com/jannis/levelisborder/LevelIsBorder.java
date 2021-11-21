@@ -1,14 +1,17 @@
 package com.jannis.levelisborder;
 
+import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -16,6 +19,8 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -26,8 +31,11 @@ import java.util.List;
 public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
     private Player latestplayer;
-    private boolean reloadborder;
-    private int all_levels;
+    private boolean reloadborder = false;
+    private Position pos_center;
+    private double size = 3;
+    private File file;
+    private YamlConfiguration config;
 
     public class JoinListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
@@ -39,11 +47,20 @@ public final class LevelIsBorder extends JavaPlugin {
         }
     }
 
-    public class DeathListener implements Listener {
+    public static class DeathListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
         public void onEvent(PlayerDeathEvent event) {
             Player player = event.getEntity();
             player.setLevel(player.getLevel() + 1);
+        }
+    }
+
+    public class ChangeWorldListener implements Listener {
+        @EventHandler(priority = EventPriority.HIGHEST)
+        public void onEvent(PlayerChangedWorldEvent event){
+            Player player = event.getPlayer();
+            player.setLevel(player.getLevel()+1);
+            reloadborder = true;
         }
     }
 
@@ -54,14 +71,15 @@ public final class LevelIsBorder extends JavaPlugin {
             World world = player.getWorld();
             List<Player> players = world.getPlayers();
 
-            for (Player pl : players) {
-                all_levels = all_levels + pl.getLevel();
-            }
-            for (Player pl : players) {
-                worldBorderApi.setBorder(pl, (all_levels * 1.8) + 3);
-            }
-            all_levels = 0;
 
+            double playerSize = (calculateSize(0, world));
+            if (size >= 3) {
+                playerSize = size + playerSize;
+            }
+
+            for (Player pl : players) {
+                worldBorderApi.setBorder(pl, playerSize, pos_center);
+            }
         }
     }
 
@@ -75,6 +93,28 @@ public final class LevelIsBorder extends JavaPlugin {
         }
     }
 
+    private double getSumOfPlayerLevels(World world) {
+        List<Player> players = world.getPlayers();
+        double sumofplayerlevels = 0;
+        for (Player pl : players) {
+            sumofplayerlevels = sumofplayerlevels + pl.getLevel();
+        }
+        return sumofplayerlevels;
+    }
+
+    private double calculateSize(double size, World world) {
+        return size + 1.8 * getSumOfPlayerLevels(world);
+    }
+
+    private void initConfigFile(){
+        this.saveResource("config.yml", false);
+        file = new File(this.getDataFolder(), "config.yml");
+        config = YamlConfiguration.loadConfiguration(file);
+        //set data
+        size = config.getDouble("size");
+        pos_center = new Position(config.getDouble("center.x"), config.getDouble("center.z"));
+    }
+
     @Override
     public void onEnable() {
         PluginManager pluginManager = this.getServer().getPluginManager();
@@ -84,6 +124,9 @@ public final class LevelIsBorder extends JavaPlugin {
 
         DeathListener deathListener = new DeathListener();
         pluginManager.registerEvents(deathListener, this);
+
+        ChangeWorldListener changeWorldListener = new ChangeWorldListener();
+        pluginManager.registerEvents(changeWorldListener, this);
 
         LevelListener levelListener = new LevelListener();
         pluginManager.registerEvents(levelListener, this);
@@ -98,8 +141,8 @@ public final class LevelIsBorder extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-
         worldBorderApi = worldBorderApiRegisteredServiceProvider.getProvider();
+        initConfigFile();
     }
 
     @Override
@@ -109,6 +152,46 @@ public final class LevelIsBorder extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
+            World world = player.getWorld();
+            List<Player> players = world.getPlayers();
+            if (args.length < 1) {
+                this.getLogger().info("Please add an argument");
+            } else if (args[0].equals("center")) {
+                try {
+                    double x = Double.parseDouble(args[1]);
+                    double z = Double.parseDouble(args[2]);
+                    config.set("center.x", x);
+                    config.set("center.z", z);
+                    pos_center = new Position(x, z);
+                    for (Player pl : players) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                    }
+                    config.save(file);
+                } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
+                    player.sendMessage("You have to enter two numbers.");
+                } catch (IOException e1){
+                    this.getLogger().info("Unable to safe configuration file.");
+                }
+
+            } else if (args[0].equals("size")) {
+                try {
+                    size = Double.parseDouble(args[1]);
+                    config.set("size", size);
+                    for (Player pl : players) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                    }
+                    config.save(file);
+                } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
+                    player.sendMessage("You have to enter a number as argument.");
+                } catch (IOException e1){
+                    this.getLogger().info("Unable to safe configuration file.");
+                }
+            } else{
+                player.sendMessage("Enter an argument. Type /help border to see all.");
+            }
+        }
         return true;
     }
 }
