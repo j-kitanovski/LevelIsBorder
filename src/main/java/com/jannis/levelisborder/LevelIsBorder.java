@@ -2,7 +2,11 @@ package com.jannis.levelisborder;
 
 import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.advancement.Advancement;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -25,7 +29,6 @@ import java.util.List;
 
 /**
  * The border size corresponds to the level of all players.
- *
  * @author Jannis
  */
 public final class LevelIsBorder extends JavaPlugin {
@@ -59,8 +62,33 @@ public final class LevelIsBorder extends JavaPlugin {
         @EventHandler(priority = EventPriority.HIGHEST)
         public void onEvent(PlayerChangedWorldEvent event){
             Player player = event.getPlayer();
-            player.setLevel(player.getLevel()+1);
-            reloadborder = true;
+            World world = player.getWorld();
+            Advancement nether_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_nether"));
+            Advancement end_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_end"));
+            Position position = new Position(player.getLocation().getX(), player.getLocation().getZ());
+            Location telepos = new Location(world, pos_center.x(),world.getHighestBlockYAt((int) Math.round(pos_center.x()), (int) Math.round(pos_center.z()))+1,pos_center.z());
+            if (world.getName().endsWith("nether") && nether_adv != null){
+                if (player.getAdvancementProgress(nether_adv).isDone()){
+                    for (Player pl : Bukkit.getOnlinePlayers()) {
+                        worldBorderApi.setBorder(pl, size, position);
+                    }
+                }
+            }
+            else if (world.getName().endsWith("end") && end_adv != null){
+                if (player.getAdvancementProgress(end_adv).isDone()){
+                    for (Player pl : Bukkit.getOnlinePlayers()){
+                        worldBorderApi.setBorder(pl, size, position);
+                    }
+                }
+            }
+            else if (!world.getName().endsWith("end") && !world.getName().endsWith("nether")){
+                if (event.getFrom().getName().endsWith("end")){
+                    player.teleport(telepos);
+                }
+                player.setLevel(player.getLevel()+1);
+                reloadborder = true;
+                latestplayer = player;
+            }
         }
     }
 
