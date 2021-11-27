@@ -2,30 +2,22 @@ package com.jannis.levelisborder;
 
 import com.github.yannicklamprecht.worldborder.api.Position;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
+import com.jannis.levelisborder.listener.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.advancement.Advancement;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLevelChangeEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The border size corresponds to the level of all players.
@@ -33,106 +25,29 @@ import java.util.List;
  * @author Jannis
  */
 public final class LevelIsBorder extends JavaPlugin {
+
+
     private WorldBorderApi worldBorderApi;
     private Player latestPlayer;
     private boolean reloadBorder = false;
-    private Position posCenter;
+    //private Position posCenter;
+    private final Map<String, Position> positionCenter = new HashMap<>();
     private double size = 3;
     private File file;
     private boolean reloadInProgress = false;
     private YamlConfiguration config;
-
-    public class JoinListener implements Listener {
-        @EventHandler(priority = EventPriority.HIGHEST)
-        public void onEvent(PlayerJoinEvent event) {
-            Player player = event.getPlayer();
-            player.setLevel(player.getLevel() + 1);
-            latestPlayer = player;
-            reloadBorder = true;
-        }
-    }
-
-    public static class DeathListener implements Listener {
-        @EventHandler(priority = EventPriority.HIGHEST)
-        public void onEvent(PlayerDeathEvent event) {
-            Player player = event.getEntity();
-            player.setLevel(player.getLevel() + 1);
-        }
-    }
-
-    public class ChangeWorldListener implements Listener {
-        @EventHandler(priority = EventPriority.HIGHEST)
-        public void onEvent(PlayerChangedWorldEvent event) {
-
-            Player player = event.getPlayer();
-            World world = player.getWorld();
-            Advancement nether_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_nether"));
-            Advancement end_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_end"));
-            Position position = new Position(player.getLocation().getX(), player.getLocation().getZ());
-            Location telePos = new Location(world, posCenter.x(), world.getHighestBlockYAt((int) Math.round(posCenter.x()), (int) Math.round(posCenter.z())) + 1, posCenter.z());
-            if (world.getName().endsWith("nether") && nether_adv != null) {
-                if (player.getAdvancementProgress(nether_adv).isDone()) {
-                    for (Player pl : Bukkit.getOnlinePlayers()) {
-                        worldBorderApi.setBorder(pl, size, position);
-                    }
-                }
-            } else if (world.getName().endsWith("end") && end_adv != null) {
-                if (player.getAdvancementProgress(end_adv).isDone()) {
-                    for (Player pl : Bukkit.getOnlinePlayers()) {
-                        worldBorderApi.setBorder(pl, size, position);
-                    }
-                }
-            } else if (!world.getName().endsWith("end") && !world.getName().endsWith("nether")) {
-                if (event.getFrom().getName().endsWith("end")) {
-                    player.teleport(telePos);
-                }
-                player.setLevel(player.getLevel() + 1);
-                reloadBorder = true;
-                latestPlayer = player;
-            }
-        }
-    }
-
-    public class LevelListener implements Listener {
-        @EventHandler(priority = EventPriority.HIGH)
-        public void onEvent(PlayerLevelChangeEvent event) {
-            Player player = event.getPlayer();
-            World world = player.getWorld();
-            List<Player> players = world.getPlayers();
+    public static final String PLUGIN_NAME = "LevelIsBorder";
 
 
-            double playerSize = (calculateSize(0, world));
-            if (size >= 0) {
-                playerSize = size + playerSize;
-            }
-
-            for (Player pl : players) {
-                worldBorderApi.setBorder(pl, playerSize, posCenter);
-            }
-        }
-    }
-
-    public class MoveListener implements Listener {
-        @EventHandler(priority = EventPriority.NORMAL)
-        public void onEvent(PlayerMoveEvent event) {
-            if (reloadBorder && latestPlayer.getUniqueId() == event.getPlayer().getUniqueId() && reloadInProgress) {
-                latestPlayer.setLevel(latestPlayer.getLevel() - 1);
-                reloadBorder = false;
-                reloadInProgress = false;
-            }
-        }
-    }
-
-    private double getSumOfPlayerLevels(World world) {
-        List<Player> players = world.getPlayers();
+    public double getSumOfPlayerLevels(World world) {
         double sumOfPlayerLevels = 0;
-        for (Player pl : players) {
+        for (Player pl : Bukkit.getOnlinePlayers()) {
             sumOfPlayerLevels = sumOfPlayerLevels + pl.getLevel();
         }
         return sumOfPlayerLevels;
     }
 
-    private double calculateSize(double size, World world) {
+    public double calculateSize(double size, World world) {
         return size + 1.8 * getSumOfPlayerLevels(world);
     }
 
@@ -142,12 +57,15 @@ public final class LevelIsBorder extends JavaPlugin {
         config = YamlConfiguration.loadConfiguration(file);
         //set data
         size = config.getDouble("size");
-        posCenter = new Position(config.getDouble("center.x"), config.getDouble("center.z"));
+
+        positionCenter.put(Util.OVER_WORLD, new Position(config.getDouble("center.over_world.x"), config.getDouble("center.over_world.z")));
+        positionCenter.put(Util.NETHER, new Position(config.getDouble("center.nether.x"), config.getDouble("center.nether.z")));
+        positionCenter.put(Util.THE_END, new Position(config.getDouble("center.the_end.x"), config.getDouble("center.the_end.z")));
     }
 
-    private void saveConfigData(double x, double z) throws IOException {
-        config.set("center.x", x);
-        config.set("center.z", z);
+    private void saveConfigData(double x, double z, String worldType) throws IOException {
+        config.set("center." + worldType + ".x", x);
+        config.set("center." + worldType + ".z", z);
         config.save(file);
     }
 
@@ -198,7 +116,7 @@ public final class LevelIsBorder extends JavaPlugin {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             World world = player.getWorld();
-            List<Player> players = world.getPlayers();
+
             if (args.length < 1) {
                 this.getLogger().info("§5Please add an argument");
             } else if (args[0].equals("center")) {
@@ -218,10 +136,11 @@ public final class LevelIsBorder extends JavaPlugin {
                         x = Double.parseDouble(args[1]);
                         z = Double.parseDouble(args[2]);
                     }
-                    saveConfigData(x, z);
-                    posCenter = new Position(x, z);
-                    for (Player pl : players) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), posCenter);
+                    saveConfigData(x, z, Util.getWorldType(world));
+                    Position newPosCenter = new Position(x, z);
+                    positionCenter.put(Util.getWorldType(world), newPosCenter);
+                    for (Player pl : Bukkit.getOnlinePlayers()) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), newPosCenter);
                     }
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
                     player.sendMessage("§5You have to enter two numbers.");
@@ -232,8 +151,8 @@ public final class LevelIsBorder extends JavaPlugin {
             } else if (args[0].equals("size")) {
                 try {
                     size = Double.parseDouble(args[1]);
-                    for (Player pl : players) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), posCenter);
+                    for (Player pl : Bukkit.getOnlinePlayers()) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), positionCenter.get(Util.getWorldType(world)));
                     }
                     saveConfigData(size);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
@@ -257,5 +176,49 @@ public final class LevelIsBorder extends JavaPlugin {
             }
         }
         return true;
+    }
+
+    public Player getLatestPlayer() {
+        return latestPlayer;
+    }
+
+    public void setLatestPlayer(Player latestPlayer) {
+        this.latestPlayer = latestPlayer;
+    }
+
+    public boolean isReloadBorder() {
+        return reloadBorder;
+    }
+
+    public void setReloadBorder(boolean reloadBorder) {
+        this.reloadBorder = reloadBorder;
+    }
+
+    public WorldBorderApi getWorldBorderApi() {
+        return worldBorderApi;
+    }
+
+    public Position getPosCenter() {
+        return positionCenter.get(Util.getWorldType(latestPlayer.getWorld()));
+    }
+
+    public double getSize() {
+        return size;
+    }
+
+    public void setSize(double size) {
+        this.size = size;
+    }
+
+    public boolean isReloadInProgress() {
+        return reloadInProgress;
+    }
+
+    public void setReloadInProgress(boolean reloadInProgress) {
+        this.reloadInProgress = reloadInProgress;
+    }
+
+    public void setPositionInMap(Position position, World world) {
+        positionCenter.put(Util.getWorldType(world), position);
     }
 }

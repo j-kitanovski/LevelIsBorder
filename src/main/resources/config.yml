@@ -1,4 +1,11 @@
-size: 3
+size: 10
 center:
-  x: 0
-  z: 0
+  over_world:
+    x: 0
+    z: 0
+  nether:
+    x: 0
+    z: 0
+  the_end:
+    x: 0
+    z: 0
