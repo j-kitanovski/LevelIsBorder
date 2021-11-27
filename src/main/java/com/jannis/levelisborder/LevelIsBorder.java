@@ -29,15 +29,17 @@ import java.util.List;
 
 /**
  * The border size corresponds to the level of all players.
+ *
  * @author Jannis
  */
 public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
-    private Player latestplayer;
-    private boolean reloadborder = false;
-    private Position pos_center;
+    private Player latestPlayer;
+    private boolean reloadBorder = false;
+    private Position posCenter;
     private double size = 3;
     private File file;
+    private boolean reloadInProgress = false;
     private YamlConfiguration config;
 
     public class JoinListener implements Listener {
@@ -45,8 +47,8 @@ public final class LevelIsBorder extends JavaPlugin {
         public void onEvent(PlayerJoinEvent event) {
             Player player = event.getPlayer();
             player.setLevel(player.getLevel() + 1);
-            latestplayer = player;
-            reloadborder = true;
+            latestPlayer = player;
+            reloadBorder = true;
         }
     }
 
@@ -60,34 +62,33 @@ public final class LevelIsBorder extends JavaPlugin {
 
     public class ChangeWorldListener implements Listener {
         @EventHandler(priority = EventPriority.HIGHEST)
-        public void onEvent(PlayerChangedWorldEvent event){
+        public void onEvent(PlayerChangedWorldEvent event) {
+
             Player player = event.getPlayer();
             World world = player.getWorld();
             Advancement nether_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_nether"));
             Advancement end_adv = getServer().getAdvancement(NamespacedKey.minecraft("story/enter_the_end"));
             Position position = new Position(player.getLocation().getX(), player.getLocation().getZ());
-            Location telepos = new Location(world, pos_center.x(),world.getHighestBlockYAt((int) Math.round(pos_center.x()), (int) Math.round(pos_center.z()))+1,pos_center.z());
-            if (world.getName().endsWith("nether") && nether_adv != null){
-                if (player.getAdvancementProgress(nether_adv).isDone()){
+            Location telePos = new Location(world, posCenter.x(), world.getHighestBlockYAt((int) Math.round(posCenter.x()), (int) Math.round(posCenter.z())) + 1, posCenter.z());
+            if (world.getName().endsWith("nether") && nether_adv != null) {
+                if (player.getAdvancementProgress(nether_adv).isDone()) {
                     for (Player pl : Bukkit.getOnlinePlayers()) {
                         worldBorderApi.setBorder(pl, size, position);
                     }
                 }
-            }
-            else if (world.getName().endsWith("end") && end_adv != null){
-                if (player.getAdvancementProgress(end_adv).isDone()){
-                    for (Player pl : Bukkit.getOnlinePlayers()){
+            } else if (world.getName().endsWith("end") && end_adv != null) {
+                if (player.getAdvancementProgress(end_adv).isDone()) {
+                    for (Player pl : Bukkit.getOnlinePlayers()) {
                         worldBorderApi.setBorder(pl, size, position);
                     }
                 }
-            }
-            else if (!world.getName().endsWith("end") && !world.getName().endsWith("nether")){
-                if (event.getFrom().getName().endsWith("end")){
-                    player.teleport(telepos);
+            } else if (!world.getName().endsWith("end") && !world.getName().endsWith("nether")) {
+                if (event.getFrom().getName().endsWith("end")) {
+                    player.teleport(telePos);
                 }
-                player.setLevel(player.getLevel()+1);
-                reloadborder = true;
-                latestplayer = player;
+                player.setLevel(player.getLevel() + 1);
+                reloadBorder = true;
+                latestPlayer = player;
             }
         }
     }
@@ -101,12 +102,12 @@ public final class LevelIsBorder extends JavaPlugin {
 
 
             double playerSize = (calculateSize(0, world));
-            if (size >= 3) {
+            if (size >= 0) {
                 playerSize = size + playerSize;
             }
 
             for (Player pl : players) {
-                worldBorderApi.setBorder(pl, playerSize, pos_center);
+                worldBorderApi.setBorder(pl, playerSize, posCenter);
             }
         }
     }
@@ -114,33 +115,45 @@ public final class LevelIsBorder extends JavaPlugin {
     public class MoveListener implements Listener {
         @EventHandler(priority = EventPriority.NORMAL)
         public void onEvent(PlayerMoveEvent event) {
-            if (reloadborder && latestplayer.getUniqueId() == event.getPlayer().getUniqueId()) {
-                latestplayer.setLevel(latestplayer.getLevel() - 1);
-                reloadborder = false;
+            if (reloadBorder && latestPlayer.getUniqueId() == event.getPlayer().getUniqueId() && reloadInProgress) {
+                latestPlayer.setLevel(latestPlayer.getLevel() - 1);
+                reloadBorder = false;
+                reloadInProgress = false;
             }
         }
     }
 
     private double getSumOfPlayerLevels(World world) {
         List<Player> players = world.getPlayers();
-        double sumofplayerlevels = 0;
+        double sumOfPlayerLevels = 0;
         for (Player pl : players) {
-            sumofplayerlevels = sumofplayerlevels + pl.getLevel();
+            sumOfPlayerLevels = sumOfPlayerLevels + pl.getLevel();
         }
-        return sumofplayerlevels;
+        return sumOfPlayerLevels;
     }
 
     private double calculateSize(double size, World world) {
         return size + 1.8 * getSumOfPlayerLevels(world);
     }
 
-    private void initConfigFile(){
+    private void initConfigFile() {
         this.saveResource("config.yml", false);
         file = new File(this.getDataFolder(), "config.yml");
         config = YamlConfiguration.loadConfiguration(file);
         //set data
         size = config.getDouble("size");
-        pos_center = new Position(config.getDouble("center.x"), config.getDouble("center.z"));
+        posCenter = new Position(config.getDouble("center.x"), config.getDouble("center.z"));
+    }
+
+    private void saveConfigData(double x, double z) throws IOException {
+        config.set("center.x", x);
+        config.set("center.z", z);
+        config.save(file);
+    }
+
+    private void saveConfigData(double size) throws IOException {
+        config.set("size", size);
+        config.save(file);
     }
 
     @Override
@@ -171,6 +184,8 @@ public final class LevelIsBorder extends JavaPlugin {
         }
         worldBorderApi = worldBorderApiRegisteredServiceProvider.getProvider();
         initConfigFile();
+        reloadInProgress = true;
+
     }
 
     @Override
@@ -185,39 +200,60 @@ public final class LevelIsBorder extends JavaPlugin {
             World world = player.getWorld();
             List<Player> players = world.getPlayers();
             if (args.length < 1) {
-                this.getLogger().info("Please add an argument");
+                this.getLogger().info("§5Please add an argument");
             } else if (args[0].equals("center")) {
                 try {
-                    double x = Double.parseDouble(args[1]);
-                    double z = Double.parseDouble(args[2]);
-                    config.set("center.x", x);
-                    config.set("center.z", z);
-                    pos_center = new Position(x, z);
-                    for (Player pl : players) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                    double x;
+                    double z;
+                    if (args[1].equals("~") && args[2].equals("~")) {
+                        x = player.getLocation().getX();
+                        z = player.getLocation().getZ();
+                    } else if (args[1].equals("~")) {
+                        x = player.getLocation().getX();
+                        z = Double.parseDouble(args[2]);
+                    } else if (args[2].equals("~")) {
+                        x = Double.parseDouble(args[1]);
+                        z = player.getLocation().getZ();
+                    } else {
+                        x = Double.parseDouble(args[1]);
+                        z = Double.parseDouble(args[2]);
                     }
-                    config.save(file);
+                    saveConfigData(x, z);
+                    posCenter = new Position(x, z);
+                    for (Player pl : players) {
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), posCenter);
+                    }
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
-                    player.sendMessage("You have to enter two numbers.");
-                } catch (IOException e1){
+                    player.sendMessage("§5You have to enter two numbers.");
+                } catch (IOException e1) {
                     this.getLogger().info("Unable to safe configuration file.");
                 }
 
             } else if (args[0].equals("size")) {
                 try {
                     size = Double.parseDouble(args[1]);
-                    config.set("size", size);
                     for (Player pl : players) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), pos_center);
+                        worldBorderApi.setBorder(pl, calculateSize(size, world), posCenter);
                     }
-                    config.save(file);
+                    saveConfigData(size);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
-                    player.sendMessage("You have to enter a number as argument.");
-                } catch (IOException e1){
+                    player.sendMessage("§5You have to enter a number as argument.");
+                } catch (IOException e1) {
                     this.getLogger().info("Unable to safe configuration file.");
                 }
-            } else{
-                player.sendMessage("Enter an argument. Type /help border to see all.");
+            } else if (args[0].equals("reload")) {
+                if (!reloadInProgress) {
+                    player.setLevel(player.getLevel() + 1);
+                    reloadBorder = true;
+                    latestPlayer = player;
+                    reloadInProgress = true;
+                    Location tp_location = new Location(world, player.getLocation().getX(), player.getLocation().getY() + 0.7, player.getLocation().getZ());
+                    player.teleport(tp_location);
+                } else {
+                    player.sendMessage("§5You have already started a reload. Move to stop it.");
+                }
+            } else {
+                player.sendMessage("§5Enter an argument. Type /help border to see all.");
             }
         }
         return true;
