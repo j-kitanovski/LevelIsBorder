@@ -15,10 +15,12 @@ public class MoveListener implements Listener {
         boolean reloadBorder = levelIsBorder.isReloadBorder();
         boolean reloadInProgress = levelIsBorder.isReloadInProgress();
         Player latestPlayer = levelIsBorder.getLatestPlayer();
-        if (reloadBorder && latestPlayer.getUniqueId() == event.getPlayer().getUniqueId() && reloadInProgress) {
+        if (reloadBorder && latestPlayer.getUniqueId() == event.getPlayer().getUniqueId()) {
             latestPlayer.setLevel(latestPlayer.getLevel() - 1);
             levelIsBorder.setReloadBorder(false);
-            levelIsBorder.setReloadInProgress(false);
+            if (reloadInProgress) {
+                levelIsBorder.setReloadInProgress(false);
+            }
         }
     }
 }

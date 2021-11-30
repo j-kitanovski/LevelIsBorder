@@ -30,16 +30,14 @@ public final class LevelIsBorder extends JavaPlugin {
     private WorldBorderApi worldBorderApi;
     private Player latestPlayer;
     private boolean reloadBorder = false;
-    //private Position posCenter;
     private final Map<String, Position> positionCenter = new HashMap<>();
-    private double size = 3;
+    private double size = 1;
     private File file;
     private boolean reloadInProgress = false;
     private YamlConfiguration config;
     public static final String PLUGIN_NAME = "LevelIsBorder";
 
-
-    public double getSumOfPlayerLevels(World world) {
+    public double getSumOfPlayerLevels() {
         double sumOfPlayerLevels = 0;
         for (Player pl : Bukkit.getOnlinePlayers()) {
             sumOfPlayerLevels = sumOfPlayerLevels + pl.getLevel();
@@ -47,8 +45,8 @@ public final class LevelIsBorder extends JavaPlugin {
         return sumOfPlayerLevels;
     }
 
-    public double calculateSize(double size, World world) {
-        return size + 1.8 * getSumOfPlayerLevels(world);
+    public double calculateSize(double size) {
+        return size + 1.3 * getSumOfPlayerLevels();
     }
 
     private void initConfigFile() {
@@ -140,7 +138,7 @@ public final class LevelIsBorder extends JavaPlugin {
                     Position newPosCenter = new Position(x, z);
                     positionCenter.put(Util.getWorldType(world), newPosCenter);
                     for (Player pl : Bukkit.getOnlinePlayers()) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), newPosCenter);
+                        worldBorderApi.setBorder(pl, calculateSize(size), newPosCenter);
                     }
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
                     player.sendMessage("§5You have to enter two numbers.");
@@ -152,7 +150,7 @@ public final class LevelIsBorder extends JavaPlugin {
                 try {
                     size = Double.parseDouble(args[1]);
                     for (Player pl : Bukkit.getOnlinePlayers()) {
-                        worldBorderApi.setBorder(pl, calculateSize(size, world), positionCenter.get(Util.getWorldType(world)));
+                        worldBorderApi.setBorder(pl, calculateSize(size), positionCenter.get(Util.getWorldType(world)));
                     }
                     saveConfigData(size);
                 } catch (NumberFormatException | NullPointerException | IndexOutOfBoundsException e1) {
@@ -204,10 +202,6 @@ public final class LevelIsBorder extends JavaPlugin {
 
     public double getSize() {
         return size;
-    }
-
-    public void setSize(double size) {
-        this.size = size;
     }
 
     public boolean isReloadInProgress() {

@@ -30,6 +30,7 @@ public class ChangeWorldListener implements Listener {
         Advancement end_adv = Bukkit.getAdvancement(NamespacedKey.minecraft("story/enter_the_end"));
         Position position = new Position(player.getLocation().getX(), player.getLocation().getZ());
         Location telePos = new Location(world, posCenter.x(), world.getHighestBlockYAt((int) Math.round(posCenter.x()), (int) Math.round(posCenter.z())) + 1, posCenter.z());
+
         if (Util.isNether(world) && nether_adv != null) {
             levelIsBorder.setPositionInMap(position, world);
             if (player.getAdvancementProgress(nether_adv).isDone()) {
