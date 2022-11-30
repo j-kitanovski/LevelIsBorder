@@ -94,7 +94,7 @@ public final class LevelIsBorder extends JavaPlugin {
         RegisteredServiceProvider<WorldBorderApi> worldBorderApiRegisteredServiceProvider = getServer().getServicesManager().getRegistration(WorldBorderApi.class);
 
         if (worldBorderApiRegisteredServiceProvider == null) {
-            getLogger().info("API not found");
+            getLogger().info("API not found. You need it to run this plugin.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
